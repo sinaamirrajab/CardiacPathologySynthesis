@@ -363,8 +363,8 @@ class StyleSPADEGenerator(BaseNetwork):
                             # help='kernel size of the resnet block')
         # parser.add_argument('--resnet_initial_kernel_size', type=int, default=7,
         #                     help='kernel size of the first convolution')
-        parser.set_defaults(resnet_n_downsample=5)
-        parser.set_defaults(resnet_n_blocks=2)
+        # parser.set_defaults(resnet_n_downsample=5)
+        # parser.set_defaults(resnet_n_blocks=2)
         parser.set_defaults(norm_G='spectralspadesyncbatch3x3')
         # parser.set_defaults(norm_G='spectralspadeinstance3x3') dont use
         # parser.set_defaults(norm_G='instance')

@@ -217,8 +217,56 @@ class Normalize(MTTransform):
         sample.update(rdict)
         return sample
 
+class NormalizeMinMaxRange(MTTransform):
+    """Normalize a tensor image with mean and standard deviation.
 
+    :param mean: mean value.
+    :param std: standard deviation value.
+    """
+    def __init__(self, range = (-1, 1)):
+        self.out_min, self.out_max = range
 
+    def __call__(self, sample):
+        input_data = sample['input']
+        in_min = input_data.min()
+        in_max = input_data.max()
+        input_data-=in_min
+        input_data/=(in_max-in_min)
+        input_data*=(self.out_max-self.out_min)
+        input_data+=self.out_min
+
+        rdict = {
+            'input': input_data,
+        }
+        sample.update(rdict)
+        return sample
+
+class NormalizeMinMaxpercentile(MTTransform):
+    """Normalize a tensor image with mean and standard deviation.
+
+    :param mean: mean value.
+    :param std: standard deviation value.
+    """
+    def __init__(self, range = (-1, 1), percentiles=(1,99)):
+        self.out_min, self.out_max = range
+        self.percentiles = percentiles
+
+    def __call__(self, sample):
+        input_data = sample['input'].clone().float().numpy()
+        cutoff = np.percentile(input_data, self.percentiles)
+        np.clip(input_data, *cutoff, out=input_data)
+        in_min = input_data.min()
+        in_max = input_data.max()
+        input_data-=in_min
+        input_data/=(in_max-in_min)
+        input_data*=(self.out_max-self.out_min)
+        input_data+=self.out_min
+
+        rdict = {
+            'input':  torch.as_tensor(input_data),
+        }
+        sample.update(rdict)
+        return sample
 
 # class PercentileBasedRescaling(MTTransform):
 

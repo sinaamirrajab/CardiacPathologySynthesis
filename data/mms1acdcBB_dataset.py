@@ -163,8 +163,10 @@ class Mms1acdcBBDataset(BaseDataset):
                 cmr_tran.RandomRotation90(p=0.7),
                 
                 cmr_tran.ToTensor(),
+                cmr_tran.NormalizeMinMaxpercentile(range=(-1,1), percentiles=(1,99)),
                 # cmr_tran.NormalizeLabel(),
-
+                # cmr_tran.NormalizeMinMaxRange(range=(-1,1)),
+                
                 # cmr_tran.PercentileBasedRescaling(out_min_max=(-1,1), percentiles=(1,99)),  #TODO: make sure the normalization is performed on the volume data not slice-by-slice
                 # cmr_tran.RandomElasticTorchio(num_control_points  = (8, 8, 4), max_displacement  = (20, 20, 0), p=0.5),
                 # cmr_tran.ClipScaleRange(min_intensity= 0, max_intensity=1),
@@ -185,7 +187,12 @@ class Mms1acdcBBDataset(BaseDataset):
                 # cmr_tran.RandomDilation_label_only(kernel_shape ='elliptical', kernel_size = 3, iteration_range = (1,2) , p=0.5),
                 # cmr_tran.RandomRotation(degrees=90),
                 # cmr_tran.RandomRotation(p=0.5),
+                
                 cmr_tran.ToTensor(),
+                cmr_tran.NormalizeMinMaxpercentile(range=(-1,1), percentiles=(1,99)),
+                # cmr_tran.NormalizeMinMaxRange(range=(-1,1)),
+                
+
                 # cmr_tran.PercentileBasedRescaling(out_min_max=(-1,1), percentiles=(1,99)),  #TODO: make sure the normalization is performed on the volume data not slice-by-slice
                 # cmr_tran.RandomElasticTorchio_label_only(num_control_points  = (8, 8, 4), max_displacement  = (14, 14, 1), p=1),
                 
