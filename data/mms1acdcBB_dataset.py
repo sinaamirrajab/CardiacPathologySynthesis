@@ -14,16 +14,6 @@ import util.cmr_transform as cmr_tran
 from torch.utils.data import DataLoader
 from torchvision.transforms import Compose
 
-# TR_CLASS_MAP_MMS_SRS= {'MYO': 2,'LV_Blood': 1, 'Scar': 3,'BG': 0,'NO_reflow': 4}
-# TR_CLASS_MAP_MMS_DES= {'MYO': 2,'LV_Blood': 1, 'Scar': 3,'BG': 0,'NO_reflow': 4}
-# TR_CLASS_MAP_MMS_SRS= {'MYO': 2,'LV_Blood': 1, 'Scar': 3,'NO_reflow': 4}
-# TR_CLASS_MAP_MMS_DES= {'MYO': 2,'LV_Blood': 1, 'Scar': 3,'NO_reflow': 0}
-
-# TR_CLASS_MAP_MMS_SRS= {'MYO': 2,'LV_Blood': 1, 'Scar': 3,'NO_reflow': 4}
-# TR_CLASS_MAP_MMS_DES= {'MYO': 0,'LV_Blood': 1, 'Scar': 2,'NO_reflow': 3}
-# sina feb 2021 for the heart with separated  labels
-# TR_CLASS_MAP_MMS_SRS= {'BG': 0,'LV_Bloodpool': 8, 'LV_Myocardium': 9,'RV_Bloodpool': 10,'abdomen': 4,'Body_fat': 2,'vessel': 6, 'extra_heart': 1, 'Lung': 5,'Skeletal': 3}
-# TR_CLASS_MAP_MMS_DES= {'BG': 0,'LV_Bloodpool': 1, 'LV_Myocardium': 2,'RV_Bloodpool': 3,'abdomen': 4,'Body_fat': 5,'vessel': 6, 'extra_heart': 7, 'Lung': 8 ,'Skeletal': 9}
 
 TR_CLASS_MAP_MMS_SRS= {'BG': 0,'LV_Bloodpool': 1, 'LV_Myocardium': 2,'RV_Bloodpool': 3}
 TR_CLASS_MAP_MMS_DES= {'BG': 0,'LV_Bloodpool': 1, 'LV_Myocardium': 2,'RV_Bloodpool': 3}
@@ -175,8 +165,8 @@ class Mms1acdcBBDataset(BaseDataset):
                 # cmr_tran.ClipNormalize(min_intensity= 0, max_intensity=4000),
                 # cmr_tran.ClipZscoreMinMax(min_intensity= 0, max_intensity=4000),
                 
-                cmr_tran.RandomHorizontalFlip2D(p=0.7),
-                cmr_tran.RandomVerticalFlip2D(p=0.7),
+                # cmr_tran.RandomHorizontalFlip2D(p=0.7),
+                # cmr_tran.RandomVerticalFlip2D(p=0.7),
                 # cmr_tran.UpdateLabels(source=TR_CLASS_MAP_MMS_SRS, destination=TR_CLASS_MAP_MMS_DES)
 
             ])

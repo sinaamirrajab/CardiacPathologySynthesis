@@ -14,7 +14,6 @@ from util.util import tensor2im, tensor2label
 # parse options
 opt = TrainOptions().parse()
 
-
 if opt.crop_size == 256:
      opt.resnet_n_downsample = 5
      opt.resnet_n_blocks = 2

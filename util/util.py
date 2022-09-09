@@ -16,23 +16,9 @@ import util.coco
 import torch
 from typing import Optional
 import random
-def load_network_vae(net, epoch, opt, device):
-    model_dir = opt.web_dir if 'train' in opt.web_dir else opt.web_dir.replace('test', 'train')
-    mode_name = model_dir + 'VAE_net' + str(epoch) + '.pth'
-    print('loaded network {}'.format(mode_name))
-    weights = torch.load(mode_name, map_location=device)
-    net.load_state_dict(weights)
-    return net
-
-def set_seed(seed):
-    """Set all random seeds."""
-    if seed is not None:
-        np.random.seed(seed)
-        random.seed(seed)
-        torch.manual_seed(seed)
-        # if want pure determinism could uncomment below: but slower
-        # torch.backends.cudnn.deterministic = True
-
+import matplotlib.pyplot as plt
+from torchvision.utils import make_grid , save_image
+from models.networks import vae_loss
 def one_hot(
     labels: torch.Tensor,
     num_classes: int,
@@ -78,6 +64,162 @@ def one_hot(
     one_hot = torch.zeros((shape[0], num_classes) + shape[1:], device=device, dtype=dtype)
 
     return one_hot.scatter_(1, labels.unsqueeze(1), 1.0) + eps
+
+
+def show_gen(generated, label=False, path='generated.png', title = 'synthesized'):
+    plt.figure(figsize=(50,50))
+    plt.axis("off")
+    # plt.title("Images ")
+    if label:
+        plt.imshow(np.transpose(make_grid(generated, nrow=10, padding=2,    normalize=True).cpu(),(1,2,0)), cmap='hot')
+        plt.title(title)
+    else:
+        plt.imshow(np.transpose(make_grid(generated, nrow=10, padding=2,    normalize=True).cpu(),(1,2,0)), cmap='jet')
+        plt.title(title)
+        # save_image(make_grid(generated,nrow=10, padding=2,    normalize=True).cpu(),fp=path)
+
+### create tool for visualization
+def print_current_errors(epoch, i, errors, t, out_dir):
+    # create a logging file to store training losses
+    log_name = os.path.join(out_dir, 'loss_log.txt')
+    # with open(log_name, "a") as log_file:
+    #         now = time.strftime("%c")
+    #         log_file.write('================ Training Loss (%s) ================\n' % now)
+
+    message = '(epoch: %d, iters: %d, time: %.3f) ' % (epoch, i, t)
+    for k, v in errors.items():
+        #print(v)
+        #if v != 0:
+        v = v.mean().float()
+        message += '%s: %.3f ' % (k, v)
+    
+    print(message)
+    with open(log_name, "a") as log_file:
+            log_file.write('%s\n' % message)  # save the message
+
+# dataloader for loading labels
+def set_seed(seed):
+    """Set all random seeds."""
+    if seed is not None:
+        np.random.seed(seed)
+        random.seed(seed)
+        torch.manual_seed(seed)
+        # if want pure determinism could uncomment below: but slower
+        # torch.backends.cudnn.deterministic = True
+### ================================================================================ loss calculation functions starts
+def combined_loss(reconstructed, output_image, mu, logvar, type = 'BCE', lamda_kld = 0.5, beta_dice = 1000 ):
+    # choose between 'BCE'  'MSE' 'L1' and 'L1F'
+    losses = {'KLD': [], 'Rec': [], 'comb':[]}
+    if type == 'BCE':
+        rec_loss = vae_loss.BCELoss()
+    elif type == 'MSE':
+        rec_loss = vae_loss.MSELoss()
+    elif type == 'L1':
+        rec_loss = vae_loss.L1Loss()
+    elif type == 'L1F':
+        rec_loss = vae_loss.L1FLoss()
+    elif type == 'Dice':
+        rec_loss = vae_loss.DiceLoss()
+    elif type == 'CE':
+        rec_loss = vae_loss.CELoss()
+    elif type == 'CEDice':
+        rec_loss1 = vae_loss.CELoss()
+        rec_loss2 = vae_loss.DiceLoss()
+    else:
+        raise ValueError("Unkown reconstruction loss: {}".format(type))
+
+
+    if type == 'CEDice':
+        REC1 = rec_loss1(reconstructed, output_image) 
+        REC2 = rec_loss2(reconstructed, output_image) 
+        REC = REC1 + REC2 * beta_dice
+        losses['Rec1']= REC1
+        losses['Rec2']= REC2 * beta_dice
+    else:
+        REC = rec_loss(reconstructed, output_image)
+    
+    # kld_loss = vae_losses.KLDLoss()
+    kld_loss = vae_loss.KLDALoss2()
+    KLD = kld_loss(mu, logvar)
+    combined = REC + lamda_kld * KLD
+    losses['KLD']= KLD
+    losses['Rec']= REC
+    losses['comb']= combined
+    return combined, losses
+
+def combined_loss_beta_VAE(reconstructed, output_image, mu, logvar, type = 'CE', lamda_kld = 1, n_train_steps=1 ):
+
+    output_image = output_image.cuda().type(torch.cuda.LongTensor).squeeze()
+    # choose between 'BCE'  'MSE' 'L1' and 'L1F'
+    losses = {'KLD': [], 'Rec': [], 'comb':[]}
+    if type == 'BCE':
+        rec_loss = vae_loss.BCELoss()
+    elif type == 'MSE':
+        rec_loss = vae_loss.MSELoss()
+    elif type == 'L1':
+        rec_loss = vae_loss.L1Loss()
+    elif type == 'L1F':
+        rec_loss = vae_loss.L1FLoss()
+    elif type == 'Dice':
+        rec_loss = vae_loss.DiceLoss()
+    elif type == 'CE':
+        rec_loss = vae_loss.CELoss()
+    elif type == 'CEDice':
+        rec_loss1 = vae_loss.CELoss()
+        rec_loss2 = vae_loss.DiceLoss()
+    else:
+        raise ValueError("Unkown reconstruction loss: {}".format(type))
+
+
+    REC = rec_loss(reconstructed, output_image)
+    
+    # kld_loss = vae_losses.KLDLoss()
+    kld_loss = vae_loss.KLDALoss2()
+    KLD = kld_loss(mu, logvar)
+    is_train = True
+    C_init = 0
+    C_fin = 1
+    steps_anneal = 4316 * 50 *2
+    C = linear_annealing(C_init, C_fin, n_train_steps, steps_anneal)
+    # combined = REC + lamda_kld * KLD
+    # combined = REC + lamda_kld * (KLD - C).abs()
+    combined = REC + lamda_kld * KLD 
+    losses['KLD']= KLD
+    losses['Rec']= REC
+    losses['comb']= combined
+    return combined, losses
+
+def linear_annealing(init, fin, step, annealing_steps):
+    """Linear annealing of a parameter."""
+    if annealing_steps == 0:
+        return fin
+    assert fin > init
+    delta = fin - init
+    annealed = min(init + delta * step / annealing_steps, fin)
+    return annealed
+
+def load_network_vae(net, epoch, opt, device):
+    model_dir = opt.web_dir if 'train' in opt.web_dir else opt.web_dir.replace('test', 'train')
+    mode_name = model_dir + 'VAE_net' + str(epoch) + '.pth'
+    print('loaded network {}'.format(mode_name))
+    weights = torch.load(mode_name, map_location=device)
+    net.load_state_dict(weights)
+    return net
+
+
+
+
+def set_seed(seed):
+    """Set all random seeds."""
+    if seed is not None:
+        np.random.seed(seed)
+        random.seed(seed)
+        torch.manual_seed(seed)
+        # if want pure determinism could uncomment below: but slower
+        # torch.backends.cudnn.deterministic = True
+
+
+
 
 def save_obj(obj, name):
     with open(name, 'wb') as f:

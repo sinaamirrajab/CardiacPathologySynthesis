@@ -3,3 +3,6 @@
 /generate_pathology.py
 /results
 pickle/acdc_pickle.pkl
+/curves
+pickle
+runs
